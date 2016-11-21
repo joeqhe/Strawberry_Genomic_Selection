@@ -1,7 +1,12 @@
 #!/usr/bin/python
+#input required: csv files with SNP locations at linkage group and integer position
+#identifies number of SNPs in an n length fragment for all fragments containing >0 SNPs
+#keeps first fragment with highest number of SNPs and deletes those SNPs from SNP list
+#repeats for x times for densest SNP locations
+#outputs top x sections
 
-n = 1000
-x = 200
+n = 100000
+x = 100
 file = "vesca_snp_positions.csv"
 
 import csv
@@ -53,14 +58,15 @@ with open(file) as csvfile:
 	
 	for row_count,row in enumerate(readCSV):
 		SNP_id, LG, position = row
-		LG = int(LG)
+		LG = int (LG)
 		SNP_data [SNP_id] = LG * 100000000 + int(position)
+#		SNP_data key in form (LG)12345678 where the numbers is the SNP position
 		if LG not in LG_count:
 			LG_count [LG] = 1
 		else:
 			LG_count [LG] +=  1
 		
-SNP_data_original = copy.deepcopy(SNP_data)
+SNP_data_original = copy.deepcopy (SNP_data)
 
 print "this file contains %d SNPs" % (row_count)
 
@@ -87,7 +93,7 @@ for SNP_id in SNP_data:
 ##########################################################################################
 
 
-for results in range (1,x):
+for results in range (1,x+1):
 	print "calculating %d of %d densest %d nucleotides in %s" % (results, x, n, file)
 	full_scan (SNP_data, bins, n)
 	
@@ -96,6 +102,38 @@ print "this file contains %d SNPs" % (row_count)
 for LG in LG_count:
 	print "with %d SNPs in LG %d" % (LG_count [LG], LG)
 
-print "type 'result' to see densest SNP regions"
+
+##########################################################################################
+#Remove overlapping SNP regions
+##########################################################################################
+
+for entry_count, entry in enumerate (result):
+	print "filtering %d of %d results for overlap" % (entry_count, len(result))
+	overlap_regions = {}
+	remove_counter = 0
+	for key in result.keys():
+		if (entry - n) <= key <= (entry + n):
+			overlap_regions [key] = result [key]
+						
+	if len (overlap_regions) > 1:
+		density = []
+		
+		for overlap in overlap_regions:
+			density.append (overlap_regions [overlap][-1])
+			
+		densest = max (density)
+		
+		for overlap in overlap_regions:
+			if overlap_regions [overlap][-1] == densest:
+				keep_SNP = overlap
+				
+		for key in overlap_regions:
+			if key is not keep_SNP:
+				del result [key]
+				remove_counter += 1
+				
+print "%d result(s) removed due to overlap" % (remove_counter)
+print "type 'result' to see densest SNP regions"	
+
 
 
